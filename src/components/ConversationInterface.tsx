@@ -52,8 +52,17 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
     } else {
       if (!agentId) {
         toast({
-          title: "Configuration Required",
-          description: "Please configure your ElevenLabs Agent ID",
+          title: "Agent ID Required",
+          description: "Please add your ElevenLabs Agent ID to start conversations",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!apiKey) {
+        toast({
+          title: "API Key Required", 
+          description: "ElevenLabs API key is required for authentication",
           variant: "destructive",
         });
         return;
@@ -63,14 +72,18 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
         // Request microphone permission
         await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Start conversation with agent ID
-        await conversation.startSession({ agentId });
+        // For authenticated agents, we need to generate signed URL on backend
+        // For now, let's try with agentId directly (for public agents)
+        await conversation.startSession({ 
+          agentId: agentId,
+          authorization: `Bearer ${apiKey}`
+        });
         setIsListening(true);
       } catch (error) {
         console.error("Failed to start conversation:", error);
         toast({
-          title: "Permission Required",
-          description: "Microphone access is required for voice conversation",
+          title: "Connection Failed",
+          description: error instanceof Error ? error.message : "Failed to connect to ElevenLabs",
           variant: "destructive",
         });
       }
