@@ -72,11 +72,9 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
         // Request microphone permission
         await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // For authenticated agents, we need to generate signed URL on backend
-        // For now, let's try with agentId directly (for public agents)
+        // Try without authorization first (for public agents)
         await conversation.startSession({ 
-          agentId: agentId,
-          authorization: `Bearer ${apiKey}`
+          agentId: agentId
         });
         setIsListening(true);
       } catch (error) {
