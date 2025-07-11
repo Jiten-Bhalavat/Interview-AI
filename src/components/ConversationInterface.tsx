@@ -21,12 +21,12 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
         description: "Voice conversation started successfully",
       });
     },
-    onDisconnect: () => {
-      console.log("Disconnected from conversation");
+    onDisconnect: (reason) => {
+      console.log("Disconnected from conversation. Reason:", reason);
       setIsListening(false);
       toast({
         title: "Disconnected",
-        description: "Voice conversation ended",
+        description: `Voice conversation ended${reason ? `: ${reason}` : ''}`,
       });
     },
     onMessage: (message) => {
