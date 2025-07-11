@@ -109,21 +109,28 @@ class ElevenLabsProxy:
         elevenlabs_ws = connection["elevenlabs_ws"]
         
         try:
+            # Send initial connection message to ElevenLabs
+            await elevenlabs_ws.send(json.dumps({
+                "type": "conversation_initiation_client_data",
+                "conversation_config_override": {}
+            }))
+            
             async for message in client_ws:
                 if message.type == WSMsgType.TEXT:
-                    data = json.loads(message.data)
-                    
-                    # Handle different message types
-                    if data.get("type") == "audio_data":
-                        # Forward audio data to ElevenLabs
-                        await elevenlabs_ws.send(message.data)
-                    elif data.get("type") == "conversation_config":
-                        # Handle conversation configuration
-                        await elevenlabs_ws.send(json.dumps(data.get("config", {})))
-                    else:
-                        # Forward other messages as-is
+                    try:
+                        data = json.loads(message.data)
+                        logger.debug(f"Received from client: {data.get('type', 'unknown')}")
+                        
+                        # Forward message to ElevenLabs as-is
                         await elevenlabs_ws.send(message.data)
                         
+                    except json.JSONDecodeError:
+                        logger.warning(f"Invalid JSON from client: {message.data}")
+                        
+                elif message.type == WSMsgType.BINARY:
+                    # Forward binary data (audio) to ElevenLabs
+                    await elevenlabs_ws.send(message.data)
+                    
                 elif message.type == WSMsgType.ERROR:
                     logger.error(f"Client WebSocket error: {message.data}")
                     break

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useConversation } from "@11labs/react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { VoiceButton } from "./VoiceButton";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -12,81 +11,175 @@ interface ConversationInterfaceProps {
 export const ConversationInterface = ({ agentId, apiKey }: ConversationInterfaceProps) => {
   const { toast } = useToast();
   const [isListening, setIsListening] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const conversation = useConversation({
-    onConnect: () => {
-      console.log("Connected to conversation");
-      toast({
-        title: "Connected",
-        description: "Voice conversation started successfully",
-      });
-    },
-    onDisconnect: () => {
-      console.log("Disconnected from conversation");
+  const handleConnect = useCallback(() => {
+    console.log("Connected to conversation");
+    setIsConnected(true);
+    toast({
+      title: "Connected",
+      description: "Voice conversation started successfully",
+    });
+  }, [toast]);
+
+  const handleDisconnect = useCallback(() => {
+    console.log("Disconnected from conversation");
+    setIsConnected(false);
+    setIsListening(false);
+    setIsSpeaking(false);
+    toast({
+      title: "Disconnected",
+      description: "Voice conversation ended",
+    });
+  }, [toast]);
+
+  const handleMessage = useCallback((data: any) => {
+    console.log("Message received:", data);
+    
+    if (data.type === "audio_response") {
+      setIsSpeaking(true);
+    } else if (data.source === "user") {
       setIsListening(false);
-      toast({
-        title: "Disconnected",
-        description: "Voice conversation ended",
+    } else if (data.source === "ai") {
+      setIsSpeaking(false);
+    }
+  }, []);
+
+  const handleError = useCallback((error: any) => {
+    console.error("Conversation error:", error);
+    toast({
+      title: "Error",
+      description: "An error occurred during the conversation",
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        } 
       });
-    },
-    onMessage: (message) => {
-      console.log("Message received:", message);
-      // Handle messages - when user stops speaking
-      if (message.source === "user") {
-        setIsListening(false);
-      }
-    },
-    onError: (error) => {
-      console.error("Conversation error:", error);
+      
+      streamRef.current = stream;
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
+          // Send binary audio data
+          wsRef.current.send(event.data);
+        }
+      };
+      
+      mediaRecorder.start(100); // Send data every 100ms
+      setIsListening(true);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      handleError(error);
+    }
+  }, [handleError]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    setIsListening(false);
+  }, []);
+
+  const connectToBackend = useCallback(async () => {
+    if (!agentId) {
       toast({
-        title: "Error",
-        description: "An error occurred during the conversation",
+        title: "Agent ID Required",
+        description: "Please add your ElevenLabs Agent ID to start conversations",
         variant: "destructive",
       });
-    },
-  });
-
-  const handleVoiceToggle = async () => {
-    if (conversation.status === "connected") {
-      await conversation.endSession();
-    } else {
-      if (!agentId) {
-        toast({
-          title: "Agent ID Required",
-          description: "Please add your ElevenLabs Agent ID to start conversations",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!apiKey) {
-        toast({
-          title: "API Key Required", 
-          description: "ElevenLabs API key is required for authentication",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      try {
-        // Request microphone permission
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Try without authorization first (for public agents)
-        await conversation.startSession({ 
-          agentId: agentId
-        });
-        setIsListening(true);
-      } catch (error) {
-        console.error("Failed to start conversation:", error);
-        toast({
-          title: "Connection Failed",
-          description: error instanceof Error ? error.message : "Failed to connect to ElevenLabs",
-          variant: "destructive",
-        });
-      }
+      return;
     }
-  };
+
+    try {
+      // Connect to Python backend WebSocket
+      const wsUrl = `ws://localhost:8000/ws/conversation?agent_id=${agentId}`;
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        handleConnect();
+        startRecording();
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleMessage(data);
+        } catch (error) {
+          console.log("Received non-JSON message:", event.data);
+        }
+      };
+      
+      ws.onclose = (event) => {
+        console.log("WebSocket closed:", event.code, event.reason);
+        handleDisconnect();
+        stopRecording();
+      };
+      
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        handleError(error);
+      };
+      
+      wsRef.current = ws;
+      
+    } catch (error) {
+      console.error("Failed to start conversation:", error);
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "Failed to connect to backend",
+        variant: "destructive",
+      });
+    }
+  }, [agentId, toast, handleConnect, handleDisconnect, handleMessage, handleError, startRecording, stopRecording]);
+
+  const disconnect = useCallback(() => {
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    stopRecording();
+  }, [stopRecording]);
+
+  const handleVoiceToggle = useCallback(async () => {
+    if (isConnected) {
+      disconnect();
+    } else {
+      await connectToBackend();
+    }
+  }, [isConnected, disconnect, connectToBackend]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, [disconnect]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8">
@@ -106,8 +199,8 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
           <div className="flex flex-col items-center space-y-6">
             {/* Voice Button */}
             <VoiceButton
-              isConnected={conversation.status === "connected"}
-              isSpeaking={conversation.isSpeaking}
+              isConnected={isConnected}
+              isSpeaking={isSpeaking}
               isListening={isListening}
               onClick={handleVoiceToggle}
               disabled={!agentId}
@@ -118,19 +211,19 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
               <div className="flex items-center justify-center space-x-2">
                 <div 
                   className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                    conversation.status === "connected" 
+                    isConnected 
                       ? "bg-green-500 shadow-voice animate-pulse" 
                       : "bg-muted"
                   }`} 
                 />
                 <span className="text-sm font-medium capitalize">
-                  {conversation.status === "connected" ? "Connected" : "Disconnected"}
+                  {isConnected ? "Connected" : "Disconnected"}
                 </span>
               </div>
               
-              {conversation.status === "connected" && (
+              {isConnected && (
                 <p className="text-xs text-muted-foreground">
-                  {conversation.isSpeaking 
+                  {isSpeaking 
                     ? "AI is speaking..." 
                     : isListening 
                     ? "Listening for your voice..." 
