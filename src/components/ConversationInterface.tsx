@@ -115,9 +115,25 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
       return;
     }
 
+    // Check if Python backend is running
+    try {
+      const response = await fetch('http://localhost:8000/api/health');
+      if (!response.ok) {
+        throw new Error('Backend not responding');
+      }
+    } catch (error) {
+      toast({
+        title: "Backend Not Running",
+        description: "Please start the Python backend: cd python_backend && python main.py",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       // Connect to Python backend WebSocket
       const wsUrl = `ws://localhost:8000/ws/conversation?agent_id=${agentId}`;
+      console.log("Connecting to:", wsUrl);
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
