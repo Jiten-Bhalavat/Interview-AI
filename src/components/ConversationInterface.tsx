@@ -89,7 +89,7 @@ export const ConversationInterface = ({ agentId, apiKey }: ConversationInterface
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8">
+    <div className="flex flex-col items-center justify-center h-full bg-background p-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
