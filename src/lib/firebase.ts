@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableNetwork } from 'firebase/firestore';
 import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -21,6 +21,11 @@ export const auth = getAuth(app);
 
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+
+// Ensure Firestore stays online
+enableNetwork(db).catch((error) => {
+  console.error("Failed to enable Firestore network:", error);
+});
 
 // Initialize Analytics (only in production)
 export const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;

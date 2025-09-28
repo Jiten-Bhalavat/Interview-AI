@@ -23,7 +23,7 @@ const Sidebar = () => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Practice Interview', href: '/practice', icon: Mic },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, disabled: true },
-    { name: 'Schedule', href: '/schedule', icon: Calendar, disabled: true },
+    { name: 'Schedule', href: '/schedule', icon: Calendar },
   ];
 
   const isActive = (href: string) => location.pathname === href;

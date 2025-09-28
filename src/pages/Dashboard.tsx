@@ -29,7 +29,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="ghost" asChild>
-                <Link to="/practice">Practice</Link>
+                <Link to="/community">Community</Link>
               </Button>
               <UserProfile size="md" />
             </div>

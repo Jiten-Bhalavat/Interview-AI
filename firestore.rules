@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - users can access their own documents, others can read for community
+    match /users/{userId} {
+      // Users can only modify their own user document
+      allow write: if request.auth != null && request.auth.uid == userId;
+      // Anyone authenticated can read user profiles (for community page)
+      allow read: if request.auth != null;
+    }
+
+    // Interview sessions - users can only access their own sessions
+    match /interview_sessions/{sessionId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // User practice history - users can only access their own history
+    match /practice_history/{historyId} {
+      allow read, write: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // Interviewers collection - allow authenticated users to read all and create/update their own
+    match /interviewers/{interviewerId} {
+      // Anyone authenticated can read all interviewer profiles
+      allow read: if request.auth != null;
+      // Users can create interviewer profiles
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+      // Users can only update their own interviewer profiles
+      allow update: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+      // Users can only delete their own interviewer profiles
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.userId;
+    }
+
+    // Bookings collection - users can create bookings and access their own
+    match /bookings/{bookingId} {
+      // Users can read bookings where they are either the user or the interviewer
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.interviewerId
+      );
+      // Users can create bookings
+      allow create: if request.auth != null &&
+        request.auth.uid == request.resource.data.userId;
+      // Users can update bookings where they are involved
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.uid == resource.data.interviewerId
+      );
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
