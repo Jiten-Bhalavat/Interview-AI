@@ -12,6 +12,8 @@ import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Community from "./pages/Community";
 import Schedule from "./pages/Schedule";
+import Analytics from "./pages/Analytics";
+import InterviewResults from "./pages/InterviewResults";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -47,6 +49,16 @@ const App = () => (
               <Route path="/schedule" element={
                 <ProtectedRoute>
                   <Schedule />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } />
+              <Route path="/interview-results/:sessionId" element={
+                <ProtectedRoute>
+                  <InterviewResults />
                 </ProtectedRoute>
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

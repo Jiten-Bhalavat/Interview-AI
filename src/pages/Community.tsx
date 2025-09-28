@@ -12,9 +12,8 @@ import Sidebar from "@/components/Sidebar";
 import InterviewerRegistrationForm from "@/components/InterviewerRegistrationForm";
 import BookingDialog from "@/components/BookingDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { testFirebaseConnection, testBookingCreation } from "@/utils/firebaseTest";
 
 interface Interviewer {
   userId: string;
@@ -54,8 +53,6 @@ const Community = () => {
   const fetchInterviewers = async () => {
     setLoading(true);
     try {
-      console.log("Starting to fetch interviewers from users collection...");
-
       // Get all users who have an interviewerProfile
       const usersSnapshot = await getDocs(collection(db, "users"));
       const interviewersData: Interviewer[] = [];
@@ -76,7 +73,6 @@ const Community = () => {
         new Date(b.interviewerProfile.createdAt).getTime() - new Date(a.interviewerProfile.createdAt).getTime()
       );
 
-      console.log("Fetched interviewers:", interviewersData.length);
       setInterviewers(interviewersData);
       setFilteredInterviewers(interviewersData);
     } catch (error) {
@@ -135,7 +131,6 @@ const Community = () => {
     setEditMode(false);
     setEditingInterviewer(null);
     // Force a refresh of the interviewers list immediately
-    console.log("Registration successful, refreshing interviewers list...");
     fetchInterviewers();
   };
 
@@ -175,17 +170,6 @@ const Community = () => {
               <h1 className="text-xl font-semibold">Community</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  console.log("=== Firebase Connection Test ===");
-                  await testFirebaseConnection();
-                  await testBookingCreation();
-                }}
-              >
-                Test Firebase
-              </Button>
               <UserProfile size="md" />
             </div>
           </div>

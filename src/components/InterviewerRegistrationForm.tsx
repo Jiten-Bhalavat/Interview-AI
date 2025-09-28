@@ -184,8 +184,6 @@ const InterviewerRegistrationForm = ({ onSuccess, editMode = false, existingData
 
     setLoading(true);
     try {
-      console.log("Starting interviewer registration...");
-
       // Create user profile structure
       const userDocRef = doc(db, "users", currentUser.uid);
 
@@ -215,16 +213,7 @@ const InterviewerRegistrationForm = ({ onSuccess, editMode = false, existingData
         }
       };
 
-      console.log("Creating user profile with data:", userProfileData);
-      console.log("User authentication state:", {
-        uid: currentUser.uid,
-        email: currentUser.email,
-        emailVerified: currentUser.emailVerified
-      });
-
       await setDoc(userDocRef, userProfileData, { merge: true });
-
-      console.log("Successfully created interviewer profile for user:", currentUser.uid);
 
       toast({
         title: editMode ? "Profile Updated! 🎉" : "Registration Successful! 🎉",
