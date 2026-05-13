@@ -10,7 +10,7 @@ A comprehensive interview preparation platform that combines artificial intellig
 
 > See our InterviewAI platform in action! **Video Project 5** walks through AI-powered mock interviews and how users connect with industry professionals for personalized feedback.
 
-https://github.com/user-attachments/assets/c03ff545-187a-4f78-b43e-023ad8dd4fc0
+https://github.com/user-attachments/assets/702bab60-30be-43ff-a37a-4ad03bdfa981
 
 Local copy in this repo: [`Video Project 5.mp4`](./Video%20Project%205.mp4)
 
